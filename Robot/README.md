@@ -1,47 +1,47 @@
 # Autonomous Surveillance and Communication Robotic Vehicle
 
 ## Description
-This project consists of an autonomous robotic vehicle equipped with a robotic arm, designed for area monitoring, patrol routines, and communication support in hazardous or restricted environments.
+Este proyecto consiste en un vehículo robótico autónomo equipado con un brazo robótico, diseñado para el monitoreo de zonas, la realización de rondas de vigilancia y el apoyo en la comunicación en entornos de riesgo o acceso limitado.
 
-The robot is capable of performing programmed patrol rounds, collecting environmental data through sensors, and acting as a mobile communication relay between separated points where traditional infrastructure is unavailable.  
-This project is intended for educational, research, and simulation purposes.
+El robot puede ejecutar patrullajes programados, recopilar información del entorno mediante sensores y funcionar como un nodo móvil de comunicación entre puntos separados cuando no existe infraestructura de red directa.  
+El proyecto está orientado a fines académicos, educativos y de simulación.
 
 ---
 
 ## Project Status
-🟡 In Development
+🟡 In Development (Academic Prototype)
 
 ---
 
 ## Project Functionality
-- Autonomous patrol routines with predefined routes
-- Area monitoring using distance and environmental sensors
-- Obstacle detection and avoidance
-- Robotic arm for object manipulation
-- Mobile communication relay between distant zones
-- Remote control override from a base station
-- Event logging during patrols
+- Ejecución de rondas autónomas mediante rutas predefinidas
+- Monitoreo del entorno utilizando sensores de distancia y ambiente
+- Detección y evasión de obstáculos
+- Manipulación de objetos mediante brazo robótico
+- Retransmisión de señales o datos entre zonas distantes
+- Control remoto desde una estación base
+- Registro básico de eventos durante las rondas
 
 ---
 
 ## Technology Used
-- Microcontroller: Arduino / ESP32 / Raspberry Pi
-- Programming Language: C++ / Python
-- DC motors with motor driver
-- Servo motors for robotic arm
-- Ultrasonic / IR sensors
-- Wireless communication modules (WiFi / Bluetooth / RF)
-- Rechargeable battery system
-- Optional modules: Camera, GPS
+- Microcontrolador: Arduino / ESP32 / Raspberry Pi
+- Lenguajes de programación: C++ / Python
+- Motores DC con controlador de motores
+- Servomotores para el brazo robótico
+- Sensores ultrasónicos / infrarrojos
+- Módulos de comunicación inalámbrica (WiFi / Bluetooth / RF)
+- Sistema de alimentación por batería
+- Módulos opcionales: cámara, GPS
 
 ---
 
 ## Use Cases
-- Surveillance of restricted or hazardous areas
-- Autonomous patrol simulations
-- Communication support in environments with limited connectivity
-- Educational robotics and automation training
-- Research and development of autonomous systems
+- Monitoreo de zonas restringidas o peligrosas
+- Simulación de patrullajes autónomos
+- Apoyo a la comunicación en entornos sin conectividad estable
+- Prácticas académicas de robótica y automatización
+- Prototipo para investigación universitaria
 
 ---
 
@@ -51,5 +51,5 @@ This project is intended for educational, research, and simulation purposes.
 ---
 
 ## Disclaimer
-This project is developed strictly for educational, research, and simulation purposes.  
-It does not promote or support real-world military or combat applications.
+Este repositorio corresponde a un proyecto académico de carácter experimental.  
+No está destinado a aplicaciones reales de tipo militar o de combate.
