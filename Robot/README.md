@@ -1,7 +1,7 @@
-# Autonomous Surveillance and Communication Robotic Vehicle
+# Robot para recoger basura
 
 ## Description
-Este proyecto consiste en un vehículo robótico autónomo equipado con un brazo robótico, diseñado para el monitoreo de zonas, la realización de rondas de vigilancia y el apoyo en la comunicación en entornos de riesgo o acceso limitado.
+Este proyecto consiste en un vehículo robótico autónomo equipado con un brazo robótico, diseñado para recoger basuras de zonas, la realización de rondas de vigilanci y  la comunicación en entornos.
 
 El robot puede ejecutar patrullajes programados, recopilar información del entorno mediante sensores y funcionar como un nodo móvil de comunicación entre puntos separados cuando no existe infraestructura de red directa.  
 El proyecto está orientado a fines académicos, educativos y de simulación.
