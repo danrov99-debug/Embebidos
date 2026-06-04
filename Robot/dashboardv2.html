@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Robot Diferencial + MeArm — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/three@0.126.1/build/three.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222c37; --line:#2d3a47;
+    --txt:#e6edf3; --muted:#8b98a5; --accent:#4fd1c5; --accent2:#f6ad55;
+    --red:#f56565; --green:#48bb78; --blue:#4299e1; --danger:#fc8181;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+       font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:14px}
+  h3{margin:0 0 10px;font-size:.95rem;font-weight:600;letter-spacing:.04em;
+     color:var(--accent);text-transform:uppercase;border-bottom:1px solid var(--line);
+     padding-bottom:6px}
+  #top{display:flex;align-items:center;gap:14px;padding:10px 16px;
+       background:var(--panel);border-bottom:1px solid var(--line)}
+  #top .dot{width:10px;height:10px;border-radius:50%;background:var(--danger)}
+  #top .dot.on{background:var(--green)}
+  #top input{background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+             padding:6px 8px;border-radius:6px;font:inherit;width:120px}
+  #top button{background:var(--accent);color:#06231f;border:none;padding:7px 14px;
+              border-radius:6px;font:inherit;font-weight:600;cursor:pointer}
+  #top button:hover{filter:brightness(1.1)}
+  
+  #grid{display:grid;grid-template-columns:1.5fr 1fr 1.2fr;gap:12px;padding:12px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+         padding:14px;display:flex;flex-direction:column}
+  #camPanel{grid-row:1/4}
+  
+  #cam{width:100%;border:1px solid var(--line);border-radius:6px;background:#000;
+       aspect-ratio:4/3;display:block;image-rendering:auto;filter:contrast(1.05) brightness(1.02)}
+  .colorbars{margin-top:10px;display:flex;gap:6px;flex-direction:column}
+  .crow{display:flex;align-items:center;gap:6px;opacity:.4;transition:.2s;font-size:.75rem}
+  .crow.on{opacity:1}
+  .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .cname{width:35px;font-weight:600;font-size:.7rem}
+  .cbar{flex:1;height:6px;background:var(--panel2);border-radius:3px;overflow:hidden}
+  .cfill{height:100%;width:0;border-radius:3px;transition:width .15s,margin-left .15s}
+  
+  /* Ajuste para que el texto de las columnas largas no desborde */
+  .xlabel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+          font-size:.65rem;color:#fff;font-weight:600;text-shadow:0 0 4px #000;
+          pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;}
+
+  #camAlert{margin-top:6px;min-height:16px;text-align:center;font-weight:600;font-size:.75rem}
+  #camAlert.on{color:#06231f;background:var(--accent2);border-radius:6px;padding:3px}
+  
+  #joyPanel{grid-column:2;grid-row:1}
+  
+  #joyWrap{position:relative;width:170px;height:170px;margin:6px auto}
+  #joyWrap .card-n,#joyWrap .card-s,#joyWrap .card-e,#joyWrap .card-o{
+    position:absolute;color:var(--accent);font-weight:700;font-size:1rem;opacity:.8;z-index:2;
+    pointer-events: none;}
+  #joyWrap .card-n{top:2px;left:50%;transform:translateX(-50%)}
+  #joyWrap .card-s{bottom:2px;left:50%;transform:translateX(-50%)}
+  #joyWrap .card-e{right:4px;top:50%;transform:translateY(-50%)}
+  #joyWrap .card-o{left:4px;top:50%;transform:translateY(-50%)}
+  
+  #joy{width:120px;height:120px;border-radius:50%;background:var(--panel2);
+       border:2px solid var(--line);position:absolute;top:25px;left:25px;
+       touch-action:none;cursor:grab; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);}
+  #knob{width:42px;height:42px;border-radius:50%;background:var(--accent);
+        position:absolute;left:39px;top:39px;box-shadow:0 0 12px #4fd1c588;
+        pointer-events: none; transition: background 0.1s;}
+  #joy:active #knob { background: #fff; box-shadow:0 0 16px #ffffffaa; }
+
+  .vw{display:flex;justify-content:space-around;font-size:.7rem;color:var(--muted);margin-top:14px}
+  .vw b{color:var(--txt);font-weight:600; font-size:1rem;}
+  
+  #armPanel{grid-column:2;grid-row:2}
+  .slider{margin:6px 0}
+  .slider label{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:2px}
+  .slider input{width:100%;accent-color:var(--accent);height:4px}
+  
+  #usPanel{grid-column:2;grid-row:3}
+  #usVal{font-size:1.6rem;font-weight:700;text-align:center;color:var(--accent)}
+  #usBar{height:10px;background:var(--panel2);border-radius:5px;overflow:hidden;margin-top:4px}
+  #usFill{height:100%;width:0;background:var(--green);transition:width .1s}
+  
+  #twin1{grid-column:3;grid-row:1;min-height:350px}
+  #twin2{grid-column:3;grid-row:2/4;min-height:350px}
+  #render1{width:100%;height:100%;background:#0b0f14;border-radius:6px;overflow:hidden}
+  #render2{width:100%;height:100%;background:#0b0f14;border-radius:6px;overflow:hidden}
+  
+  .oled-opts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+  .oled-opts button{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
+                    padding:6px;border-radius:4px;cursor:pointer;font:inherit;font-size:.7rem}
+  .oled-opts button.active{background:var(--accent);color:#06231f;font-weight:600}
+  #oledScreen{background:#0a2818;border:2px solid var(--line);border-radius:4px;
+              padding:6px;min-height:50px;font-family:monospace;color:#7CFC9A;font-size:.7rem;white-space:pre}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span class="dot" id="connDot"></span>
+  <span id="connTxt">Desconectado</span>
+  <input id="ip" value="10.124.191.90" />
+  <input id="port" value="8080" style="width:70px" />
+  <input id="prefix" value="UDFJC/emb1/robot0" style="width:160px" />
+  <button id="btnConn">Conectar</button>
+</div>
+
+<div id="grid">
+
+  <section class="panel" id="camPanel">
+    <h3>Cámara en vivo (<span id="camResLabel">480x360</span>)</h3>
+    <canvas id="cam"></canvas>
+
+    <div id="xRuler" style="position:relative;height:14px;margin:8px 4px 2px;user-select:none">
+      <canvas id="rulerCanvas" style="width:100%;height:14px;border-radius:3px;display:block"></canvas>
+    </div>
+
+    <div class="colorbars">
+      <div class="crow" id="rowR">
+        <div class="cdot" style="background:#f56565"></div>
+        <div class="cname">ROJO</div>
+        <div style="flex:1;position:relative;height:14px">
+          <div class="cbar" style="position:absolute;inset:4px 0">
+            <div class="cfill" id="barR" style="background:#f56565"></div>
+          </div>
+          <div id="xlabelR" class="xlabel">---</div>
+        </div>
+      </div>
+      <div class="crow" id="rowG">
+        <div class="cdot" style="background:#48bb78"></div>
+        <div class="cname">VERDE</div>
+        <div style="flex:1;position:relative;height:14px">
+          <div class="cbar" style="position:absolute;inset:4px 0">
+            <div class="cfill" id="barG" style="background:#48bb78"></div>
+          </div>
+          <div id="xlabelG" class="xlabel">---</div>
+        </div>
+      </div>
+      <div class="crow" id="rowB">
+        <div class="cdot" style="background:#4299e1"></div>
+        <div class="cname">AZUL</div>
+        <div style="flex:1;position:relative;height:14px">
+          <div class="cbar" style="position:absolute;inset:4px 0">
+            <div class="cfill" id="barB" style="background:#4299e1"></div>
+          </div>
+          <div id="xlabelB" class="xlabel">---</div>
+        </div>
+      </div>
+    </div>
+    <div id="camAlert"></div>
+  </section>
+
+  <section class="panel" id="joyPanel">
+    <h3>Control Motores</h3>
+    
+    <div id="joyWrap">
+      <span class="card-n">A</span>
+      <span class="card-s">R</span>
+      <span class="card-e">D</span>
+      <span class="card-o">I</span>
+      <div id="joy"><div id="knob"></div></div>
+    </div>
+    
+    <div class="vw"><div>v: <b id="vVal">0</b></div><div>w: <b id="wVal">0</b></div></div>
+  </section>
+
+  <section class="panel" id="armPanel">
+    <h3>Brazo MeArm</h3>
+    <div class="slider">
+      <label>a0 base: <span id="a0Val">90</span>°</label>
+      <input id="a0" type="range" min="0" max="180" value="90" />
+    </div>
+    <div class="slider">
+      <label>a1 hombro: <span id="a1Val">45</span>°</label>
+      <input id="a1" type="range" min="0" max="90" value="45" />
+    </div>
+    <div class="slider">
+      <label>a2 codo: <span id="a2Val">90</span>°</label>
+      <input id="a2" type="range" min="45" max="90" value="90" />
+    </div>
+    <h3 style="margin-top:10px">Pantalla OLED</h3>
+    <div class="oled-opts">
+      <button data-src="motors">Motores</button>
+      <button data-src="arm">Brazo</button>
+      <button data-src="camera">Cámara</button>
+      <button data-src="ultra">Ultrasonido</button>
+      <button data-src="volt">Voltaje</button>
+    </div>
+    <div id="oledScreen">---</div>
+  </section>
+
+  <section class="panel" id="usPanel">
+    <h3>Ultrasonido</h3>
+    <div id="usVal">N/A</div>
+    <div id="usBar"><div id="usFill"></div></div>
+    
+    <h3 style="margin-top:15px; border-bottom:1px solid var(--line); padding-bottom:6px; color:var(--accent2)">Voltaje Pila</h3>
+    <div id="voltVolts" style="font-size:1.6rem; font-weight:700; text-align:center; color:var(--accent2)">--- V</div>
+  </section>
+
+  <section class="panel" id="twin1">
+    <h3>Gemelo 3D — Carro + Brazo</h3>
+    <div id="render1"></div>
+  </section>
+
+  <section class="panel" id="twin2">
+    <h3>Gemelo 3D — Detalle MeArm</h3>
+    <div id="render2"></div>
+  </section>
+
+</div>
+
+<script>
+// ═════════════════════════════════════════════════════════════════════
+// BUS CLIENT
+// ═════════════════════════════════════════════════════════════════════
+class Bus {
+  constructor() {
+    this.subs = {};
+    this.prefix = "";
+    this.ws = null;
+  }
+  _full(suf) { return this.prefix + "/" + suf; }
+  subscribe(suf, cb) {
+    (this.subs[suf] = this.subs[suf] || []).push(cb);
+  }
+  publishLocal(topic, data) {
+    const suf = topic.startsWith(this.prefix + "/") ? topic.slice(this.prefix.length + 1) : topic;
+    for (const pat in this.subs) {
+      if (pat === suf && this.subs[pat]) {
+        this.subs[pat].forEach(cb => cb(suf, data));
+      }
+    }
+  }
+  pub(suf, msg) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ action: "PUB", topic: this._full(suf), data: msg }));
+    }
+  }
+  sub(suf, cb) {
+    this.subscribe(suf, cb);
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ action: "SUB", topic: this._full(suf) }));
+    }
+  }
+  resubscribeAll() {
+    for (const suf in this.subs) {
+      this.ws.send(JSON.stringify({ action: "SUB", topic: this._full(suf) }));
+    }
+  }
+}
+
+const bus = new Bus();
+
+function connect() {
+  const ip = document.getElementById("ip").value.trim();
+  const port = document.getElementById("port").value.trim();
+  let pfx = document.getElementById("prefix").value.trim();
+  if (pfx.endsWith("/")) pfx = pfx.slice(0, -1);
+  bus.prefix = pfx;
+  const url = `ws://${ip}:${port}`;
+  bus.ws = new WebSocket(url);
+  bus.ws.onopen = () => {
+    setConn(true);
+    bus.resubscribeAll();
+  };
+  bus.ws.onclose = () => { setConn(false); bus.ws = null; };
+  bus.ws.onerror = () => {};
+  bus.ws.onmessage = (ev) => {
+    try {
+      const m = JSON.parse(ev.data);
+      if (m.action === "PUB") {
+        bus.publishLocal(m.topic, m.data);
+      }
+    } catch (e) {}
+  };
+}
+
+function setConn(on) {
+  document.getElementById("connDot").classList.toggle("on", on);
+  document.getElementById("connTxt").textContent = on ? "✓ Conectado" : "Desconectado";
+}
+
+document.getElementById("btnConn").onclick = connect;
+
+// ═════════════════════════════════════════════════════════════════════
+// CÁMARA & REGLA VISUAL
+// ═════════════════════════════════════════════════════════════════════
+let _camW = 480;
+let _camH = 360;
+let _frameCount = 0;
+
+bus.sub("camera/frame", (t, data) => {
+  if (!data || !data.jpeg_b64) return;
+  if (data.w) { _camW = data.w; }
+  if (data.h) { _camH = data.h; }
+  document.getElementById("camResLabel").textContent = _camW + "x" + _camH;
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.getElementById("cam");
+    cv.width = _camW;
+    cv.height = _camH;
+    const cx = cv.getContext("2d");
+    cx.imageSmoothingEnabled = true;
+    cx.imageSmoothingQuality = "high";
+    cx.drawImage(img, 0, 0);
+    _frameCount++;
+  };
+  img.src = "data:image/jpeg;base64," + data.jpeg_b64;
+});
+
+// Función dibujadora mejorada para iterar por posibles "Arrays" de posiciones 
+function drawRuler(xRanges, xCols) {
+  const canvas = document.getElementById("rulerCanvas");
+  const W = canvas.offsetWidth || 400;
+  canvas.width = W;
+  canvas.height = 14;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, W, 14);
+  ctx.fillStyle = "#1a2129";
+  ctx.fillRect(0, 0, W, 14);
+
+  const steps = Math.round(_camW / 120);
+  ctx.strokeStyle = "#2d3a47";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= steps; i++) {
+    const x = Math.round((i / steps) * W);
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 14); ctx.stroke();
+  }
+
+  const colors = [
+    { key: "red",   fill: "rgba(245,101,101,0.55)", stroke: "#f56565" },
+    { key: "green", fill: "rgba(72,187,120,0.55)",  stroke: "#48bb78" },
+    { key: "blue",  fill: "rgba(66,153,225,0.55)",  stroke: "#4299e1" },
+  ];
+  
+  colors.forEach(({ key, fill, stroke }) => {
+    let ranges = xRanges[key];
+    let cols = xCols ? xCols[key] : undefined;
+    
+    // Convertir a Array por si la API envía un solo objeto en lugar de lista
+    if (ranges && !Array.isArray(ranges)) ranges = [ranges];
+    if (cols !== undefined && !Array.isArray(cols)) cols = [cols];
+
+    ctx.fillStyle = fill;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 1;
+
+    // Pintar todos los rangos (desde un pixel inicial a uno final)
+    if (ranges) {
+      ranges.forEach(r => {
+        if (r.x0 !== undefined && r.x1 !== undefined) {
+          const px0 = Math.round((r.x0 / _camW) * W);
+          const px1 = Math.round((r.x1 / _camW) * W);
+          ctx.fillRect(px0, 2, Math.max(px1 - px0, 2), 10);
+          ctx.strokeRect(px0, 2, Math.max(px1 - px0, 2), 10);
+        }
+      });
+    }
+
+    // Pintar todas las columnas puntuales extra
+    if (cols) {
+      cols.forEach(col => {
+        const px = Math.round((col / _camW) * W);
+        ctx.fillRect(px - 2, 2, 4, 10);
+        ctx.strokeRect(px - 2, 2, 4, 10);
+      });
+    }
+  });
+
+  ctx.fillStyle = "#8b98a5";
+  ctx.font = "9px monospace";
+  ctx.textAlign = "left";  ctx.fillText("0", 2, 11);
+  ctx.textAlign = "right"; ctx.fillText(_camW, W - 2, 11);
+}
+
+bus.sub("camera/analysis", (t, a) => {
+  if (!a) return;
+  const present    = a.present    || {};
+  const xRanges    = a.x_range    || {};
+  const colsCount  = a.cols_count || {};   // ★ NUEVO: # columnas por color
+  const xCols      = a.x || a.cx || a.column || a.col || {};
+  // Si el firmware manda el ancho real, lo usamos para escalar
+  if (a.w) { _camW = a.w; }
+
+  const keys   = ["red",  "green", "blue"];
+  const barIds = ["barR", "barG",  "barB"];
+  const rowIds = ["rowR", "rowG",  "rowB"];
+  const lblIds = ["xlabelR", "xlabelG", "xlabelB"];
+
+  keys.forEach((c, k) => {
+    const row = document.getElementById(rowIds[k]);
+    row.classList.toggle("on", !!present[c]);
+
+    const bar = document.getElementById(barIds[k]);
+    const lbl = document.getElementById(lblIds[k]);
+
+    let ranges = xRanges[c];
+    let cols   = xCols[c];
+    if (ranges && !Array.isArray(ranges)) ranges = [ranges];
+    if (cols !== undefined && !Array.isArray(cols)) cols = [cols];
+
+    const nCols = colsCount[c] || 0;
+    const pctCols = _camW ? Math.round((nCols / _camW) * 1000) / 10 : 0;
+
+    if (present[c] || nCols > 0) {
+      // Texto principal: conteo de columnas ocupadas
+      let txt = nCols + "/" + _camW + " cols (" + pctCols + "%)";
+
+      // Detalle: hasta 3 rangos para no saturar la línea
+      let minX = _camW, maxX = 0;
+      if (ranges && ranges.length > 0) {
+        const parts = ranges.slice(0, 3).map(r => r.x0 + "-" + r.x1);
+        if (ranges.length > 3) parts.push("…");
+        txt += "  [" + parts.join(", ") + "]";
+        ranges.forEach(r => {
+          if (r.x0 < minX) minX = r.x0;
+          if (r.x1 > maxX) maxX = r.x1;
+        });
+      }
+      lbl.textContent = txt;
+
+      // Barra: usar el ancho total ocupado (no el bounding box)
+      if (nCols > 0) {
+        bar.style.marginLeft = (minX / _camW) * 100 + "%";
+        bar.style.width = Math.max((nCols / _camW) * 100, 0.5) + "%";
+      } else {
+        bar.style.marginLeft = "0%";
+        bar.style.width = "0%";
+      }
+    } else {
+      bar.style.marginLeft = "0%";
+      bar.style.width = "0%";
+      lbl.textContent = "0 cols";
+    }
+  });
+
+  drawRuler(xRanges, xCols);
+
+  const alerts = a.alerts || [];
+  const alertEl = document.getElementById("camAlert");
+  if (alerts.length > 0) {
+    alertEl.classList.add("on");
+    alertEl.textContent = alerts.join(" • ");
+  } else {
+    alertEl.classList.remove("on");
+    alertEl.textContent = "";
+  }
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// CONTROL MOTORES (JOYSTICK MENOS SENSIBLE)
+// ═════════════════════════════════════════════════════════════════════
+function setVel(v, w) {
+  document.getElementById("vVal").textContent = Math.round(v);
+  document.getElementById("wVal").textContent = Math.round(w);
+  
+  robotState.v = Math.round(v);
+  robotState.w = Math.round(w);
+  
+  bus.pub("car/vel", { 
+    linear: Math.round(w), 
+    angular: Math.round(-v) 
+  });
+}
+
+const joy = document.getElementById("joy");
+const knob = document.getElementById("knob");
+let isDragging = false;
+
+["mousedown", "touchstart"].forEach(e => { joy.addEventListener(e, () => { isDragging = true; }); });
+["mouseup", "touchend"].forEach(e => { document.addEventListener(e, () => { isDragging = false; }); });
+
+["mousemove", "touchmove"].forEach(e => {
+  document.addEventListener(e, (evt) => {
+    if (!isDragging) return;
+    const touch = evt.touches ? evt.touches[0] : evt;
+    const rect = joy.getBoundingClientRect();
+    
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    
+    let dx = touch.clientX - cx;
+    let dy = touch.clientY - cy;
+    let r = Math.sqrt(dx * dx + dy * dy);
+    
+    const maxR = rect.width / 2 - 21; 
+    const deadzone = 12; 
+
+    if (r > maxR) { 
+      dx = (dx / r) * maxR; 
+      dy = (dy / r) * maxR; 
+      r = maxR; 
+    }
+
+    knob.style.left = (rect.width / 2 + dx - 21) + "px";
+    knob.style.top = (rect.height / 2 + dy - 21) + "px";
+
+    let v = 0;
+    let w = 0;
+
+    if (r > deadzone) {
+      let normR = (r - deadzone) / (maxR - deadzone);
+      let intensity = Math.pow(normR, 1.4) * 100;
+      v = -dy / r * intensity;
+      w = -dx / r * intensity; 
+    }
+
+    setVel(v, w);
+  });
+});
+
+["mouseup", "touchend", "mouseleave"].forEach(e => {
+  document.addEventListener(e, () => {
+    knob.style.left = "";
+    knob.style.top = "";
+    setVel(0, 0);
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// BRAZO INPUTS
+// ═════════════════════════════════════════════════════════════════════
+["a0", "a1", "a2"].forEach((id, k) => {
+  document.getElementById(id).addEventListener("input", (e) => {
+    const v = parseInt(e.target.value);
+    document.getElementById(id + "Val").textContent = v;
+    robotState["alpha" + k] = v;
+    bus.pub("arm/joint_state", {
+      alpha0: robotState.alpha0,
+      alpha1: robotState.alpha1,
+      alpha2: robotState.alpha2,
+      duration_s: 0.3
+    });
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// ULTRASONIDO Y VOLTAJE (SIN CAMBIOS)
+// ═════════════════════════════════════════════════════════════════════
+bus.sub("ultra/distance", (t, p) => {
+  if (!p) return;
+  const d = p.cm || 0;
+  document.getElementById("usVal").textContent = Math.round(d) + " cm";
+  document.getElementById("usFill").style.width = Math.min(100, (d / 300) * 100) + "%";
+});
+
+let _lastVolt = null;
+bus.sub("volt/value", (t, p) => {
+  if (!p || p.v === undefined || p.v === null) return;
+  _lastVolt = p.v;
+  document.getElementById("voltVolts").textContent = Number(p.v).toFixed(2) + " V";
+  const active = document.querySelector(".oled-opts button.active");
+  if (active && active.dataset.src === "volt") {
+    document.getElementById("oledScreen").textContent =
+      "== VOLTAJE ==\nADC0 (GP26)\nV: " + Number(p.v).toFixed(2) + " V";
+  }
+});
+
+document.querySelectorAll(".oled-opts button").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    document.querySelectorAll(".oled-opts button").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
+    bus.pub("oled/select", { source: e.target.dataset.src });
+    const src = e.target.dataset.src;
+    const screen = document.getElementById("oledScreen");
+    if (src === "volt") {
+      screen.textContent = "== VOLTAJE ==\nADC0 (GP26)\nV: " +
+        (_lastVolt === null ? "---" : Number(_lastVolt).toFixed(2) + " V");
+    } else {
+      screen.textContent = "Fuente: " + src;
+    }
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════
+// GÉMELOS 3D — THREE.JS
+// ═════════════════════════════════════════════════════════════════════
+const robotState = {
+  x: 0, z: 0, heading: 0,
+  v: 0, w: 0,
+  alpha0: 90, alpha1: 45, alpha2: 90
+};
+
+let carScene, carCamera, carRenderer, carGroup;
+let carArmBase, carArmShoulder, carArmElbow;
+
+function initCarTwin() {
+  const cont = document.getElementById("render1");
+  const w = cont.clientWidth, h = cont.clientHeight;
+
+  carScene = new THREE.Scene();
+  carScene.background = new THREE.Color(0x0b0f14);
+
+  carCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
+  carCamera.position.set(0, 6, -3.2);
+  carCamera.lookAt(0, 0, 0);
+
+  carRenderer = new THREE.WebGLRenderer({ antialias: true });
+  carRenderer.setSize(w, h);
+  cont.appendChild(carRenderer.domElement);
+
+  carScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(5, 10, 5);
+  carScene.add(dl);
+
+  const grid = new THREE.GridHelper(50, 100, 0x2d3a47, 0x1a2129);
+  carScene.add(grid);
+
+  carGroup = new THREE.Group();
+
+  const chassis = new THREE.Mesh(
+    new THREE.BoxGeometry(1.3, 0.12, 1.7),
+    new THREE.MeshStandardMaterial({ color: 0xc8a165 })
+  );
+  chassis.position.y = 0.35;
+  carGroup.add(chassis);
+
+  const caster = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0x222c37 })
+  );
+  caster.position.set(0, 0.15, -0.7);
+  carGroup.add(caster);
+
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.18, 20);
+  const wheelMat = new THREE.MeshStandardMaterial({ color: 0xf6c000 });
+  [[-0.72, 0.35, 0.35], [0.72, 0.35, 0.35]].forEach(p => {
+    const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(p[0], p[1], p[2]);
+    carGroup.add(wheel);
+    const hub = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.2, 12),
+      new THREE.MeshStandardMaterial({ color: 0x333333 })
+    );
+    hub.rotation.z = Math.PI / 2;
+    hub.position.set(p[0], p[1], p[2]);
+    carGroup.add(hub);
+  });
+
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.13, 0.35, 8),
+    new THREE.MeshStandardMaterial({ color: 0x4fd1c5 })
+  );
+  arrow.rotation.x = Math.PI / 2;
+  arrow.position.set(0, 0.42, 1.0); 
+  carGroup.add(arrow);
+
+  const linkMat = new THREE.MeshStandardMaterial({ color: 0xf6ad55 });
+  const jointMat = new THREE.MeshStandardMaterial({ color: 0x4fd1c5 });
+
+  carArmBase = new THREE.Group();
+  carArmBase.position.set(0, 0.41, 0.1);
+
+  const baseMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.25, 0.3, 0.1, 16),
+    new THREE.MeshStandardMaterial({ color: 0x222c37 })
+  );
+  baseMesh.position.y = 0.05;
+  carArmBase.add(baseMesh);
+
+  carArmShoulder = new THREE.Group();
+  carArmShoulder.position.y = 0.1;
+  const shoulderJoint = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), jointMat);
+  carArmShoulder.add(shoulderJoint);
+
+  const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), linkMat);
+  upperArm.position.y = 0.25;
+  carArmShoulder.add(upperArm);
+
+  carArmElbow = new THREE.Group();
+  carArmElbow.position.y = 0.5;
+  const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), jointMat);
+  carArmElbow.add(elbowJoint);
+
+  const foreArm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.4, 0.06), linkMat);
+  foreArm.position.y = 0.2;
+  carArmElbow.add(foreArm);
+
+  const gripper = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.08, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x48bb78 })
+  );
+  gripper.position.y = 0.4;
+  carArmElbow.add(gripper);
+
+  carArmShoulder.add(carArmElbow);
+  carArmBase.add(carArmShoulder);
+  carGroup.add(carArmBase);
+
+  carScene.add(carGroup);
+  animateCar();
+}
+
+function animateCar() {
+  requestAnimationFrame(animateCar);
+  if (!carGroup) return;
+
+  const dt = 0.016;
+  
+  robotState.heading += robotState.w * 0.04 * dt; 
+  const speedFactor = 0.15;
+  const distance = robotState.v * speedFactor * dt;
+
+  carGroup.position.x += Math.sin(robotState.heading) * distance;
+  carGroup.position.z += Math.cos(robotState.heading) * distance;
+  carGroup.rotation.y = robotState.heading;
+
+  carCamera.position.x = carGroup.position.x;
+  carCamera.position.z = carGroup.position.z - 3.2;
+  carCamera.lookAt(carGroup.position);
+
+  if (carArmBase && carArmShoulder && carArmElbow) {
+    carArmBase.rotation.y = (robotState.alpha0 - 90) * Math.PI / 180 + Math.PI;
+    carArmShoulder.rotation.x = (45 - robotState.alpha1) * (Math.PI / 180);
+    const absoluteElbow = (robotState.alpha2 - 180) * (Math.PI / 180);
+    carArmElbow.rotation.x = absoluteElbow - carArmShoulder.rotation.x;
+  }
+
+  carRenderer.render(carScene, carCamera);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// GÉMELO 2: DETALLE MEARM
+// ─────────────────────────────────────────────────────────────────────
+let armScene, armCamera, armRenderer;
+let armBase, armShoulder, armElbow;
+
+function initArmTwin() {
+  const cont = document.getElementById("render2");
+  const w = cont.clientWidth, h = cont.clientHeight;
+
+  armScene = new THREE.Scene();
+  armScene.background = new THREE.Color(0x0b0f14);
+
+  armCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
+  armCamera.position.set(3, 2.5, 3);
+  armCamera.lookAt(0, 1, 0);
+
+  armRenderer = new THREE.WebGLRenderer({ antialias: true });
+  armRenderer.setSize(w, h);
+  cont.appendChild(armRenderer.domElement);
+
+  armScene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(5, 10, 5);
+  armScene.add(dl);
+
+  const grid = new THREE.GridHelper(6, 12, 0x2d3a47, 0x1a2129);
+  armScene.add(grid);
+
+  const linkMat = new THREE.MeshStandardMaterial({ color: 0xf6ad55 });
+  const jointMat = new THREE.MeshStandardMaterial({ color: 0x4fd1c5 });
+
+  armBase = new THREE.Group();
+  const baseMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.4, 0.5, 0.3, 16),
+    new THREE.MeshStandardMaterial({ color: 0x222c37 })
+  );
+  baseMesh.position.y = 0.15;
+  armBase.add(baseMesh);
+
+  armShoulder = new THREE.Group();
+  armShoulder.position.y = 0.3;
+  const shoulderJoint = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), jointMat);
+  armShoulder.add(shoulderJoint);
+
+  const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.0, 0.15), linkMat);
+  upperArm.position.y = 0.5;
+  armShoulder.add(upperArm);
+
+  armElbow = new THREE.Group();
+  armElbow.position.y = 1.0;
+  const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), jointMat);
+  armElbow.add(elbowJoint);
+
+  const foreArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.8, 0.12), linkMat);
+  foreArm.position.y = 0.4;
+  armElbow.add(foreArm);
+
+  const gripper = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.15, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0x48bb78 })
+  );
+  gripper.position.y = 0.8;
+  armElbow.add(gripper);
+
+  armShoulder.add(armElbow);
+  armBase.add(armShoulder);
+  armScene.add(armBase);
+
+  animateArm();
+}
+
+function animateArm() {
+  requestAnimationFrame(animateArm);
+  if (!armBase) return;
+
+  armBase.rotation.y = (robotState.alpha0 - 90) * Math.PI / 180 + Math.PI;
+  armShoulder.rotation.x = (45 - robotState.alpha1) * (Math.PI / 180);
+  const absoluteElbowArm = (robotState.alpha2 - 180) * (Math.PI / 180);
+  armElbow.rotation.x = absoluteElbowArm - armShoulder.rotation.x;
+
+  armRenderer.render(armScene, armCamera);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Eventos Globales
+// ─────────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  if (typeof THREE !== "undefined") {
+    initCarTwin();
+    initArmTwin();
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (carRenderer) {
+    const c1 = document.getElementById("render1");
+    carCamera.aspect = c1.clientWidth / c1.clientHeight;
+    carCamera.updateProjectionMatrix();
+    carRenderer.setSize(c1.clientWidth, c1.clientHeight);
+  }
+  if (armRenderer) {
+    const c2 = document.getElementById("render2");
+    armCamera.aspect = c2.clientWidth / c2.clientHeight;
+    armCamera.updateProjectionMatrix();
+    armRenderer.setSize(c2.clientWidth, c2.clientHeight);
+  }
+});
+
+bus.sub("robot/state", (t, s) => {
+  if (!s) return;
+  if (s.v !== undefined) robotState.v = s.v;
+  if (s.w !== undefined) robotState.w = s.w;
+  if (s.alpha0 !== undefined) {
+    robotState.alpha0 = s.alpha0;
+    document.getElementById("a0Val").textContent = s.alpha0;
+    document.getElementById("a0").value = s.alpha0;
+  }
+  if (s.alpha1 !== undefined) {
+    robotState.alpha1 = s.alpha1;
+    document.getElementById("a1Val").textContent = s.alpha1;
+    document.getElementById("a1").value = s.alpha1;
+  }
+  if (s.alpha2 !== undefined) {
+    robotState.alpha2 = s.alpha2;
+    document.getElementById("a2Val").textContent = s.alpha2;
+    document.getElementById("a2").value = s.alpha2;
+  }
+});
+</script>
+</body>
+</html>
