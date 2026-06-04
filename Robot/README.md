@@ -7,12 +7,11 @@
 
 ## Team
 
-| Name | GitHub |
-|------|--------|
-| David Ernesto Rusinque Rivera | — |
-| Daniel Nicolás Rodríguez Villar | — |
-| Carlos David Santos Triana | — |
-| Nico | — |
+| Name |
+|------|
+| Nicolás Velasquez Amarillo | 
+| Daniel Nicolás Rodríguez Villar |
+
 
 ---
 
