@@ -214,6 +214,3 @@ The robot reacts to the camera automatically when `REACT_ENABLED = True` in `mai
 
 ---
 
-## License
-
-MIT — see `LICENSE` file.
